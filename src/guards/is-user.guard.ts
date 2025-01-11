@@ -1,8 +1,8 @@
 import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaService } from '../../prisma.service';
+import { PrismaService } from '../prisma.service';
 import { User } from '@prisma/client';
-import { config } from '../../config';
+import { config } from '../config';
 
 @Injectable()
 export class IsUserGuard implements CanActivate {
@@ -29,7 +29,7 @@ export class IsUserGuard implements CanActivate {
             });
         } catch (error) {
             console.log(error);
-            
+
             throw new UnauthorizedException("Token time expired")
         }
         if (!user) {

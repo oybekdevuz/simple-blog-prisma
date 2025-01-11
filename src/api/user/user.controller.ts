@@ -3,8 +3,8 @@ import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { LoginDto } from './dto/login-user.dto';
-import { IsUserGuard } from '../guards/is-user.guard';
-import { CurrentUser } from '../common/decorator/current-user';
+import { IsUserGuard } from '../../guards/is-user.guard';
+import { CurrentUser } from '../../decorator/current-user';
 import { User } from '@prisma/client';
 
 @Controller('users')

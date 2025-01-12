@@ -1,13 +1,12 @@
 import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma.service';
 import { User } from '@prisma/client';
-import { config } from '../config';
+import { JwtToken } from '../infrastructure/utils/jwt-token';
 
 @Injectable()
 export class IsUserGuard implements CanActivate {
     constructor(
-        private readonly jwtService: JwtService,
+        private readonly jwtService: JwtToken,
         private prismaService: PrismaService
     ) { }
 
@@ -24,9 +23,7 @@ export class IsUserGuard implements CanActivate {
         }
         let user: User | null;
         try {
-            user = await this.jwtService.verify(token, {
-                secret: config.ACCESS_SECRET_KEY,
-            });
+            user = await this.jwtService.verifyAccess(token);
         } catch (error) {
             console.log(error);
 

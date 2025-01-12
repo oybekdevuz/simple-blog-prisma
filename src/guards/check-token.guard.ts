@@ -1,10 +1,10 @@
 import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import { JwtToken } from '../infrastructure/utils/jwt-token';
 
 @Injectable()
 export class CheckExpToken implements CanActivate {
   constructor(
-    private readonly jwtService: JwtService,
+    private readonly jwtService: JwtToken,
   ) { }
 
   async canActivate(context: ExecutionContext) {
@@ -20,9 +20,7 @@ export class CheckExpToken implements CanActivate {
     }
     let user;
     try {
-      user = await this.jwtService.verify(token, {
-        secret: process.env.ACCESS_TOKEN_KEY,
-      });
+      user = await this.jwtService.verifyAccess(token);
     } catch (error) {
       throw new UnauthorizedException("Token vaqti tugagan");
     }

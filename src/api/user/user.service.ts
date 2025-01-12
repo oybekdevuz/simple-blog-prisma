@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from '@prisma/client';
@@ -55,24 +55,30 @@ export class UserService {
         return this.prisma.user.findUnique({ where: { id: id } });
     }
 
-    async update(id: string, updateUserDto: UpdateUserDto) {
+    async update(id: string, updateUserDto: UpdateUserDto, currentUser: User) {
         const user = await this.prisma.user.findUnique({ where: { id } });
         if (!user) {
             throw new BadRequestException("User not found")
         }
-        if(updateUserDto.password) {
+        if (currentUser.id !== user.id) {
+            throw new ForbiddenException("Forbidden")
+        }
+        if (updateUserDto.password) {
             const hashed_pass = await BcryptEncryption.encrypt(updateUserDto.password);
             updateUserDto.password = hashed_pass;
         }
         return this.prisma.user.update({ data: updateUserDto, where: { id } });
     }
 
-    async remove(id: string) {
+    async remove(id: string, currentUser: User) {
         const user = await this.prisma.user.findUnique({ where: { id } });
         if (!user) {
             throw new BadRequestException("User not found")
         }
-        
+        if (currentUser.id !== user.id) {
+            throw new ForbiddenException("Forbidden")
+        }
+
         return this.prisma.user.delete({ where: { id } });
     }
 }

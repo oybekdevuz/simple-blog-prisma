@@ -1,0 +1,101 @@
+name: CI and Deploy to Server
+
+on:
+  push:
+    branches:
+      - dev
+      - master
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Node.js (local runner)
+      uses: actions/setup-node@v3
+      with:
+        node-version: 'v20.12.2'
+
+    - name: Install dependencies (local runner)
+      run: npm ci  # package-lock.json mavjud bo'lsa, npm ci dan foydalaning
+
+    - name: Build project (local runner)
+      run: npm run build
+
+    # Production branch uchun deploy (masalan, master branch)
+    - name: Deploy to production server (for master branch)
+      if: github.ref == 'refs/heads/master'
+      uses: appleboy/ssh-action@v0.1.2
+      with:
+        host: ${{ secrets.PROD_SERVER_IP }}
+        username: root
+        password: ${{ secrets.PROD_SERVER_PASSWORD }}
+        script: |
+         # NVM o'rnatilganligini tekshirish va kerakli Node.js versiyasini tanlash
+          if [ ! -d "$HOME/.nvm" ]; then
+            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.2/install.sh | bash
+            source ~/.nvm/nvm.sh
+          else
+            source ~/.nvm/nvm.sh
+          fi
+          nvm use v20.12.2
+          
+          # Loyihaning joylashuvini yaratish va loyihani olish
+          mkdir -p projects/blog/${{ secrets.REPO_NAME }}
+          cd projects/blog/${{ secrets.REPO_NAME }}
+          if [ ! -d ".git" ]; then
+              git clone --branch master https://oybekdevuz:${{ secrets.TOKEN_GITHUB }}@github.com/oybekdevuz/${{ secrets.REPO_NAME }}.git .
+          else
+              git pull origin master
+          fi
+          # .env faylini yuklash
+          echo "${{ secrets.PROD_ENV_CONTENT }}" > .env
+
+          # Kerakli kutubxonalarni o'rnatish va loyihani build qilish
+          npm install
+          npm run build
+          
+          # PM2 orqali jarayonlarni boshqarish
+          pm2 restart ${{ secrets.REPO_NAME }}-prod || pm2 start npm --name="${{ secrets.REPO_NAME }}-prod" -- run start
+          pm2 save
+
+    # Development branch uchun deploy (dev branch)
+    - name: Deploy to development server (for dev branch)
+      if: github.ref == 'refs/heads/dev'
+      uses: appleboy/ssh-action@v0.1.2
+      with:
+        host: ${{ secrets.DEV_SERVER_IP }}
+        username: root
+        password: ${{ secrets.DEV_SERVER_PASSWORD }}
+        script: |
+          # NVM o'rnatilganligini tekshirish va kerakli Node.js versiyasini tanlash
+          if [ ! -d "$HOME/.nvm" ]; then
+            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.2/install.sh | bash
+            source ~/.nvm/nvm.sh
+          else
+            source ~/.nvm/nvm.sh
+          fi
+          nvm use v20.12.2
+          
+          # Loyihaning joylashuvini yaratish va loyihani olish
+          mkdir -p projects/blog/${{ secrets.REPO_NAME }}
+          cd projects/blog/${{ secrets.REPO_NAME }}
+          if [ ! -d ".git" ]; then
+              git clone --branch dev https://oybekdevuz:${{ secrets.TOKEN_GITHUB }}@github.com/oybekdevuz/${{ secrets.REPO_NAME }}.git .
+          else
+              git pull origin dev
+          fi
+
+          # .env faylini yuklash
+          echo "${{ secrets.DEV_ENV_CONTENT }}" > .env
+
+          # Kerakli kutubxonalarni o'rnatish va loyihani build qilish
+          npm ci
+          npm run build
+          
+          # PM2 orqali jarayonlarni boshqarish
+          pm2 restart ${{ secrets.REPO_NAME }}-dev || pm2 start npm --name="${{ secrets.REPO_NAME }}-dev" -- run start
+          pm2 save
